@@ -76,15 +76,73 @@ costlier error.
 
 ## Appeals Workflow
 
-_TODO: how an appeal is captured, logged, and reflected as "under_review"._
+A creator who believes a classification is wrong POSTs their `content_id` and
+free-text `creator_reasoning` to `/appeal`. The system:
+
+1. Looks up the original decision for that `content_id` (`find_latest`).
+2. Appends an appeal record to the audit log with `status: "under_review"`, the
+   `appeal_reasoning`, and the linked `original_attribution` / `original_confidence`.
+3. Returns a confirmation. **No automated re-classification** — a human reviewer
+   works the queue by filtering `GET /log` for `status == "under_review"`, seeing
+   the creator's reasoning next to the original signal scores.
+
+```bash
+curl -s -X POST http://localhost:5000/appeal \
+  -H "Content-Type: application/json" \
+  -d '{"content_id": "609837be-...", "creator_reasoning": "I wrote this myself; English is my second language so my style is plain."}'
+# -> {"content_id": "609837be-...", "status": "under_review",
+#     "message": "Your appeal was received and is under review."}
+```
 
 ## Rate Limiting
 
-_TODO: the limits you chose and your reasoning; paste the 200/429 status output._
+`POST /submit` is rate limited per client IP (Flask-Limiter, in-memory store):
+
+```python
+@limiter.limit("10 per minute;100 per day")
+```
+
+**Reasoning for these values:**
+- **10 per minute (burst guard):** No legitimate creator submits ten pieces of
+  writing in a minute — submission is a deliberate act. This cheaply blocks a
+  script from flooding the endpoint to probe/reverse-engineer the detector or
+  spam classifications, while leaving huge headroom for real use.
+- **100 per day (sustained guard):** Caps how much a single IP can extract or
+  abuse over a day even while staying under the per-minute limit. A prolific
+  writer posting a handful of pieces a day never approaches it.
+- **Per-IP keying** (`get_remote_address`) is a pragmatic default; a production
+  system would key on the authenticated account instead.
+
+**Evidence** — 12 rapid requests against the 10/min limit (first 10 pass, rest
+are throttled):
+
+```
+request 1  -> 200      request 7  -> 200
+request 2  -> 200      request 8  -> 200
+request 3  -> 200      request 9  -> 200
+request 4  -> 200      request 10 -> 200
+request 5  -> 200      request 11 -> 429
+request 6  -> 200      request 12 -> 429
+```
 
 ## Audit Log
 
-_TODO: describe the structured log and show at least 3 entries._
+Every classification and appeal is appended as one JSON object per line to
+`logs/audit.jsonl` (structured — never `print()`), readable live via `GET /log`
+(newest first). A **classification** entry records `content_id`, `creator_id`,
+ISO-8601 UTC `timestamp`, `attribution`, combined `confidence`, **both individual
+signal scores** (`llm_score`, `stylometric_score`), the `signals` used, and
+`status`. An **appeal** entry records the `content_id`, `appeal_reasoning`, the
+linked original decision, and `status: "under_review"`.
+
+Sample log (three classifications spanning all verdicts + one appeal):
+
+```json
+{"content_id": "609837be-...", "creator_id": "creator-alice", "attribution": "likely_ai", "confidence": 0.81, "llm_score": 0.9, "stylometric_score": 0.675, "signals": ["llm_judge", "stylometric"], "status": "classified", "timestamp": "2026-07-01T05:44:17.819403Z"}
+{"content_id": "b46fca40-...", "creator_id": "creator-bob", "attribution": "likely_human", "confidence": 0.126, "llm_score": 0.1, "stylometric_score": 0.165, "signals": ["llm_judge", "stylometric"], "status": "classified", "timestamp": "2026-07-01T05:44:18.220805Z"}
+{"content_id": "1787639c-...", "creator_id": "creator-carol", "attribution": "uncertain", "confidence": 0.644, "llm_score": 0.8, "stylometric_score": 0.41, "signals": ["llm_judge", "stylometric"], "status": "classified", "timestamp": "2026-07-01T05:44:18.498546Z"}
+{"content_id": "609837be-...", "status": "under_review", "appeal_reasoning": "I wrote this marketing copy myself for my startup. English is my second language so my style is plain and repetitive, but it is my own work.", "original_attribution": "likely_ai", "original_confidence": 0.81, "timestamp": "2026-07-01T05:44:18.500215Z"}
+```
 
 ## Known Limitations
 
