@@ -14,10 +14,9 @@ Two INDEPENDENT signals, each returning P(AI-generated) in [0.0, 1.0]:
                                    tends to be more uniform; human prose varies.
                                    -> Milestone 4
 
-The DESIGN DECISIONS (the judge prompt + its output format, which metrics to
-use and how to fold them into one score) belong in planning.md first. The
-`TODO`s below mark exactly where those decisions plug in. Everything else --
-the Groq call, graceful fallback, metric math -- is ready to run.
+The design decisions (the judge prompt + its output format, which metrics to use
+and how to fold them into one score) are specified in planning.md and the README;
+this module implements them.
 """
 
 from __future__ import annotations

@@ -14,9 +14,9 @@ Endpoints (the contract every other file implements against):
   GET  /log      returns the most recent audit entries as JSON (for grading
                  visibility; in production this would require auth).
 
-This is the wired skeleton: it runs end-to-end right now (signals return
-neutral placeholders until Milestones 3–5 fill them in), so you can curl every
-endpoint before writing detection logic.
+The full pipeline runs end-to-end: two detection signals -> combined confidence
+-> attribution + transparency label -> audit log, plus the appeal workflow and
+per-IP rate limiting.
 """
 
 import uuid
@@ -48,7 +48,7 @@ def home():
 
 
 @app.route("/submit", methods=["POST"])
-@limiter.limit("10 per minute;100 per day")  # TODO (M5): justify these in README
+@limiter.limit("10 per minute;100 per day")  # limits justified in README
 def submit():
     data = request.get_json(silent=True) or {}
     text = data.get("text")

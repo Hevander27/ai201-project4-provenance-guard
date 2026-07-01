@@ -17,9 +17,9 @@ from config import (
 def combine(llm_score: float, stylometric_score: float) -> float:
     """Fold both signal scores into a single confidence in [0,1].
 
-    PLACEHOLDER method: normalized weighted average. Revisit in Milestone 4 —
-    e.g. you might weight the LLM more, or damp the combined score toward 0.5
-    when the two signals strongly disagree (honest uncertainty).
+    Method: normalized weighted average (LLM-led 0.6/0.4). A natural extension
+    would be to damp the combined score toward 0.5 when the two signals strongly
+    disagree; we instead rely on the wide "uncertain" band to absorb that.
     """
     total = LLM_WEIGHT + STYLOMETRIC_WEIGHT
     combined = (LLM_WEIGHT * llm_score + STYLOMETRIC_WEIGHT * stylometric_score) / total

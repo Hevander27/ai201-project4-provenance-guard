@@ -2,8 +2,8 @@
 
 Mirrors the RepairSafe reference `config.py` pattern (dotenv + Groq model
 constant), extended with the confidence thresholds and signal weights that
-Project 4 needs. The PLACEHOLDER values below are DESIGN DECISIONS — pin them
-down in planning.md (Milestones 2 & 4), then update them here.
+Project 4 needs. The values below are the design decisions from planning.md
+(the reasoning lives there and in the README).
 """
 
 import os
@@ -31,9 +31,9 @@ AI_THRESHOLD = 0.75     # confidence >= this  -> "likely_ai"
 HUMAN_THRESHOLD = 0.40  # confidence <= this  -> "likely_human"
 #                          in between          -> "uncertain"
 
-# PLACEHOLDER signal weights for combining the two signals (Milestone 4).
-# The LLM signal is usually the stronger of the two; stylometrics is a
-# structural cross-check. Tune + justify in planning.md.
+# Signal weights for combining the two signals (planning.md, Milestone 4).
+# The LLM signal is the stronger holistic detector; stylometrics is an
+# independent structural cross-check.
 LLM_WEIGHT = 0.6
 STYLOMETRIC_WEIGHT = 0.4
 
