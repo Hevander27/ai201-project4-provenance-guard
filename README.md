@@ -39,8 +39,25 @@ _TODO: why these two signals, what each captures, what each misses._
 
 ## Confidence Scoring
 
-_TODO: how you combine signals into a calibrated score, and two example
-submissions with noticeably different scores (from your Milestone 4 testing)._
+`confidence` = P(text is AI-generated) = `0.6 · P_llm + 0.4 · P_stylometric`,
+mapped to a category by threshold: `>= 0.75` → likely AI, `<= 0.40` → likely
+human, in between → uncertain. The LLM (semantic) signal leads; the stylometric
+(structural) signal is an independent cross-check. Short samples are damped
+toward 0.5 because their statistics are unreliable.
+
+Two submissions with noticeably different confidence (from Milestone 4 testing):
+
+| Submission | LLM score | Stylometric score | Confidence | Result |
+| --- | --- | --- | --- | --- |
+| Uniform marketing copy ("Our platform delivers powerful results…") | 0.90 | 0.68 | **0.81** | Likely AI-generated |
+| Casual restaurant review ("ok so i finally tried that ramen place…") | 0.10 | 0.17 | **0.13** | Likely human-written |
+
+The scoring also surfaces honest disagreement: a polished academic paragraph read
+as AI *semantically* (LLM 0.80) but *structurally* human (stylometrics 0.34, it
+was sentence-length-varied), combining to 0.61 → **Uncertain** rather than a false
+verdict. A formal (non-native-style) human paragraph likewise landed at 0.55 →
+**Uncertain**, not accused — the wide uncertain band absorbing the false-positive
+risk by design.
 
 ## Transparency Label Variants
 

@@ -112,19 +112,50 @@ def _parse_llm_output(raw: str) -> tuple[float, str]:
 # =============================================================================
 
 def stylometric_signal(text: str) -> dict:
-    """Structural statistics of the text. No API call.
+    """Structural statistics of the text mapped to P(AI). No API call.
 
     Returns {"score": float in [0,1] (P(AI)), "metrics": {...}}.
-    The raw metrics are computed for you; how you MAP them to a single score is
-    the Milestone 4 design decision.
+
+    Design (Milestone 4), calibrated on the sample texts:
+      - Burstiness (sentence-length variance) is the PRIMARY driver: human prose
+        mixes short and long sentences (high variance); AI prose is more uniform
+        (low variance). Weighted 0.7.
+      - Lexical diversity (type-token ratio) is SECONDARY: low TTR = repetitive =
+        AI-leaning. Weighted 0.3. It is length-confounded and near-useless on
+        short texts, hence the lower weight.
+      - Average sentence length is deliberately NOT used to raise the AI score:
+        long sentences signal formality, and formal humans are the group we most
+        want to avoid false-positiving.
+      - Short-text damping: on very short samples the statistics are unreliable
+        (planning.md edge case #2), so the score is pulled toward 0.5.
     """
     metrics = compute_metrics(text)
 
-    # TODO (M4): combine `metrics` into one P(AI) score per planning.md.
-    # Intuition to encode: LOW sentence-length variance + LOW type-token ratio
-    # (repetitive, uniform) leans AI; high variance / rich vocabulary leans human.
-    score = 0.5  # PLACEHOLDER
-    return {"score": score, "metrics": metrics}
+    # Low variance (uniform) -> AI (0.85); high variance (bursty) -> human (0.15).
+    ai_burstiness = _linmap(
+        metrics["sentence_length_variance"], lo=10.0, hi=40.0, at_lo=0.85, at_hi=0.15
+    )
+    # Low TTR (repetitive) -> AI (0.80); high TTR (diverse) -> human (0.20).
+    ai_diversity = _linmap(
+        metrics["type_token_ratio"], lo=0.55, hi=0.85, at_lo=0.80, at_hi=0.20
+    )
+
+    score = 0.7 * ai_burstiness + 0.3 * ai_diversity
+
+    # Reliability damping toward "no evidence" (0.5) for tiny samples.
+    words = metrics["word_count"]
+    if words < 25:
+        score = 0.5 + (score - 0.5) * (words / 25.0)
+
+    return {"score": round(max(0.0, min(1.0, score)), 3), "metrics": metrics}
+
+
+def _linmap(x: float, lo: float, hi: float, at_lo: float, at_hi: float) -> float:
+    """Linearly map x in [lo, hi] to [at_lo, at_hi], clamped at the ends."""
+    if hi == lo:
+        return (at_lo + at_hi) / 2.0
+    t = max(0.0, min(1.0, (x - lo) / (hi - lo)))
+    return at_lo + t * (at_hi - at_lo)
 
 
 def compute_metrics(text: str) -> dict:
