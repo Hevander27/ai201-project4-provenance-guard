@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Provenance Guard</title>
+<style>
+  :root {
+    --bg: #0f172a; --panel: #ffffff; --ink: #0f172a; --muted: #64748b;
+    --line: #e2e8f0; --accent: #4f46e5; --accent-ink: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(160deg, #1e293b 0%, #0f172a 60%);
+    min-height: 100vh; padding: 32px 16px;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  header { color: #fff; margin-bottom: 20px; }
+  header h1 { margin: 0 0 4px; font-size: 1.6rem; letter-spacing: -0.02em; }
+  header p { margin: 0; color: #94a3b8; font-size: 0.92rem; }
+  .card {
+    background: var(--panel); border-radius: 14px; padding: 22px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06);
+  }
+  .tabs { display: flex; gap: 6px; margin-bottom: 18px; background: #f1f5f9;
+    padding: 5px; border-radius: 10px; }
+  .tab { flex: 1; border: 0; background: transparent; padding: 9px 12px;
+    border-radius: 7px; font-size: 0.9rem; font-weight: 600; color: var(--muted);
+    cursor: pointer; transition: all .15s; }
+  .tab.active { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+  label.fld { display: block; font-size: 0.8rem; font-weight: 600; color: var(--muted);
+    margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+  textarea, input[type=text] {
+    width: 100%; border: 1px solid var(--line); border-radius: 9px; padding: 11px 12px;
+    font: inherit; font-size: 0.95rem; resize: vertical; background: #fff; color: var(--ink);
+  }
+  textarea:focus, input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  .row { margin-bottom: 14px; }
+  button.go {
+    background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 9px;
+    padding: 11px 18px; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  }
+  button.go:hover { filter: brightness(1.08); }
+  button.go:disabled { opacity: 0.55; cursor: default; }
+  .hint { font-size: 0.82rem; color: var(--muted); margin-top: 8px; }
+
+  /* result badge */
+  .result { margin-top: 20px; }
+  .badge { border-radius: 12px; padding: 16px 18px; border: 1px solid transparent; }
+  .badge .top { display: flex; align-items: center; gap: 10px; font-weight: 700;
+    font-size: 1.05rem; }
+  .badge .label-text { margin: 8px 0 0; font-size: 0.95rem; }
+  .meter { height: 10px; border-radius: 6px; background: #e5e7eb; margin: 14px 0 6px;
+    overflow: hidden; }
+  .meter > span { display: block; height: 100%; border-radius: 6px; }
+  .meter-cap { font-size: 0.78rem; color: var(--muted); display: flex;
+    justify-content: space-between; }
+  .signals { display: flex; gap: 12px; margin-top: 16px; }
+  .sig { flex: 1; background: #f8fafc; border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px; }
+  .sig .name { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--muted); font-weight: 600; }
+  .sig .val { font-size: 1.25rem; font-weight: 700; margin-top: 2px; }
+  .sig .bar { height: 6px; background: #e5e7eb; border-radius: 4px; margin-top: 6px; overflow: hidden; }
+  .sig .bar > span { display: block; height: 100%; background: #475569; }
+  .cid { margin-top: 14px; font-size: 0.8rem; color: var(--muted);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .cid code { background: #f1f5f9; padding: 2px 7px; border-radius: 5px; color: var(--ink);
+    font-size: 0.78rem; }
+  .cid button { border: 1px solid var(--line); background: #fff; border-radius: 6px;
+    padding: 3px 9px; font-size: 0.75rem; cursor: pointer; }
+
+  /* log table */
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); }
+  th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  td code { font-size: 0.76rem; color: var(--muted); }
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 0.76rem;
+    font-weight: 600; }
+  .empty { color: var(--muted); text-align: center; padding: 24px; font-size: 0.9rem; }
+  .toast { margin-top: 12px; padding: 10px 12px; border-radius: 9px; font-size: 0.88rem; }
+  .toast.ok { background: #dcfce7; color: #166534; }
+  .toast.err { background: #fee2e2; color: #991b1b; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🛡️ Provenance Guard</h1>
+    <p>Multi-signal AI-attribution for creative text — classify, score uncertainty, appeal.</p>
+  </header>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" data-tab="analyze">Analyze</button>
+      <button class="tab" data-tab="appeal">Appeal</button>
+      <button class="tab" data-tab="log">Audit Log</button>
+    </div>
+
+    <!-- ANALYZE -->
+    <section id="analyze">
+      <div class="row">
+        <label class="fld" for="text">Content to analyze</label>
+        <textarea id="text" rows="6" placeholder="Paste a poem, story excerpt, or blog post…"></textarea>
+      </div>
+      <div class="row">
+        <label class="fld" for="creator">Creator ID (optional)</label>
+        <input type="text" id="creator" placeholder="e.g. creator-alice" />
+      </div>
+      <button class="go" id="analyzeBtn">Analyze attribution</button>
+      <div id="analyzeToast"></div>
+      <div id="result" class="result hidden"></div>
+    </section>
+
+    <!-- APPEAL -->
+    <section id="appeal" class="hidden">
+      <div class="row">
+        <label class="fld" for="appealId">Content ID</label>
+        <input type="text" id="appealId" placeholder="Paste a content_id from an analysis" />
+        <div class="hint">Tip: after analyzing, this is filled in for you automatically.</div>
+      </div>
+      <div class="row">
+        <label class="fld" for="reasoning">Your reasoning</label>
+        <textarea id="reasoning" rows="4" placeholder="Explain why you believe the classification is wrong…"></textarea>
+      </div>
+      <button class="go" id="appealBtn">Submit appeal</button>
+      <div id="appealToast"></div>
+    </section>
+
+    <!-- LOG -->
+    <section id="log" class="hidden">
+      <div class="row" style="display:flex;justify-content:space-between;align-items:center;">
+        <label class="fld" style="margin:0;">Recent decisions</label>
+        <button class="go" id="refreshLog" style="padding:7px 14px;font-size:0.85rem;">Refresh</button>
+      </div>
+      <div id="logBody"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+const STYLE = {
+  likely_ai:    { bg:'#fee2e2', fg:'#991b1b', bar:'#dc2626', icon:'⚠️',  name:'Likely AI-generated' },
+  uncertain:    { bg:'#fef3c7', fg:'#92400e', bar:'#d97706', icon:'❓', name:'Attribution uncertain' },
+  likely_human: { bg:'#dcfce7', fg:'#166534', bar:'#16a34a', icon:'✅', name:'Likely human-written' },
+  under_review: { bg:'#e2e8f0', fg:'#334155', bar:'#64748b', icon:'🕐', name:'Under review' },
+};
+const st = a => STYLE[a] || STYLE.uncertain;
+const pct = c => Math.round(c * 100);
+
+// tab switching
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  ['analyze','appeal','log'].forEach(id =>
+    document.getElementById(id).classList.toggle('hidden', id !== t.dataset.tab));
+  if (t.dataset.tab === 'log') loadLog();
+}));
+
+function toast(el, msg, ok) {
+  el.innerHTML = '<div class="toast ' + (ok ? 'ok' : 'err') + '">' + msg + '</div>';
+}
+
+// ---- Analyze ----
+const analyzeBtn = document.getElementById('analyzeBtn');
+analyzeBtn.addEventListener('click', async () => {
+  const text = document.getElementById('text').value.trim();
+  const creator = document.getElementById('creator').value.trim() || 'anonymous';
+  const toastEl = document.getElementById('analyzeToast');
+  const resEl = document.getElementById('result');
+  toastEl.innerHTML = '';
+  if (!text) { toast(toastEl, 'Please enter some text to analyze.', false); return; }
+  analyzeBtn.disabled = true; analyzeBtn.textContent = 'Analyzing…';
+  try {
+    const r = await fetch('/submit', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, creator_id: creator })
+    });
+    if (r.status === 429) { toast(toastEl, 'Rate limit reached (10/min). Wait a minute and try again.', false); return; }
+    const d = await r.json();
+    if (!r.ok) { toast(toastEl, d.error || 'Something went wrong.', false); return; }
+    renderResult(d);
+    document.getElementById('appealId').value = d.content_id;  // prefill appeal
+  } catch (e) {
+    toast(toastEl, 'Could not reach the server.', false);
+  } finally {
+    analyzeBtn.disabled = false; analyzeBtn.textContent = 'Analyze attribution';
+  }
+});
+
+function renderResult(d) {
+  const s = st(d.attribution);
+  const conf = pct(d.confidence);
+  const sg = d.signal_scores || { llm: null, stylometric: null };
+  const sigBar = (v) => v == null ? '' :
+    '<div class="bar"><span style="width:' + pct(v) + '%"></span></div>';
+  const el = document.getElementById('result');
+  el.classList.remove('hidden');
+  el.innerHTML =
+    '<div class="badge" style="background:' + s.bg + ';border-color:' + s.bar + '33;color:' + s.fg + '">' +
+      '<div class="top"><span>' + s.icon + '</span><span>' + s.name + '</span></div>' +
+      '<p class="label-text">' + d.label + '</p>' +
+      '<div class="meter"><span style="width:' + conf + '%;background:' + s.bar + '"></span></div>' +
+      '<div class="meter-cap"><span>0% (human)</span><span><b>' + conf + '%</b> estimated AI</span><span>100% (AI)</span></div>' +
+    '</div>' +
+    '<div class="signals">' +
+      '<div class="sig"><div class="name">Signal 1 · LLM judge</div><div class="val">' +
+        (sg.llm == null ? '—' : sg.llm.toFixed(2)) + '</div>' + sigBar(sg.llm) + '</div>' +
+      '<div class="sig"><div class="name">Signal 2 · Stylometric</div><div class="val">' +
+        (sg.stylometric == null ? '—' : sg.stylometric.toFixed(2)) + '</div>' + sigBar(sg.stylometric) + '</div>' +
+    '</div>' +
+    '<div class="cid">content_id <code id="cidVal">' + d.content_id + '</code>' +
+      '<button onclick="navigator.clipboard.writeText(\'' + d.content_id + '\')">copy</button></div>';
+}
+
+// ---- Appeal ----
+const appealBtn = document.getElementById('appealBtn');
+appealBtn.addEventListener('click', async () => {
+  const content_id = document.getElementById('appealId').value.trim();
+  const creator_reasoning = document.getElementById('reasoning').value.trim();
+  const toastEl = document.getElementById('appealToast');
+  toastEl.innerHTML = '';
+  if (!content_id) { toast(toastEl, 'Enter the content_id you want to appeal.', false); return; }
+  if (!creator_reasoning) { toast(toastEl, 'Please explain your reasoning.', false); return; }
+  appealBtn.disabled = true; appealBtn.textContent = 'Submitting…';
+  try {
+    const r = await fetch('/appeal', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content_id, creator_reasoning })
+    });
+    const d = await r.json();
+    if (!r.ok) { toast(toastEl, d.error || 'Appeal failed.', false); return; }
+    toast(toastEl, '✅ ' + d.message + ' Status is now “' + d.status + '”.', true);
+    document.getElementById('reasoning').value = '';
+  } catch (e) {
+    toast(toastEl, 'Could not reach the server.', false);
+  } finally {
+    appealBtn.disabled = false; appealBtn.textContent = 'Submit appeal';
+  }
+});
+
+// ---- Log ----
+document.getElementById('refreshLog').addEventListener('click', loadLog);
+async function loadLog() {
+  const body = document.getElementById('logBody');
+  body.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const d = await (await fetch('/log')).json();
+    const rows = d.entries || [];
+    if (!rows.length) { body.innerHTML = '<div class="empty">No entries yet. Analyze something first.</div>'; return; }
+    let html = '<table><thead><tr><th>When</th><th>Verdict / Status</th><th>Confidence</th><th>Content</th></tr></thead><tbody>';
+    for (const e of rows) {
+      const key = e.status === 'under_review' ? 'under_review' : e.attribution;
+      const s = st(key);
+      const conf = (e.confidence != null) ? pct(e.confidence) + '%' : '—';
+      const when = (e.timestamp || '').replace('T', ' ').slice(0, 19);
+      html += '<tr><td><code>' + when + '</code></td>' +
+        '<td><span class="pill" style="background:' + s.bg + ';color:' + s.fg + '">' + s.icon + ' ' + s.name + '</span></td>' +
+        '<td>' + conf + '</td>' +
+        '<td><code>' + (e.content_id || '').slice(0, 8) + '…</code></td></tr>';
+    }
+    body.innerHTML = html + '</tbody></table>';
+  } catch (e) {
+    body.innerHTML = '<div class="empty">Could not load the log.</div>';
+  }
+}
+</script>
+</body>
+</html>

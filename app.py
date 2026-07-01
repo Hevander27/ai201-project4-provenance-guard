@@ -44,6 +44,12 @@ limiter = Limiter(
 
 @app.route("/")
 def home():
+    # Single-page UI (static/index.html) that drives the JSON API below.
+    return app.send_static_file("index.html")
+
+
+@app.route("/health")
+def health():
     return "Provenance Guard is running."
 
 
@@ -83,6 +89,9 @@ def submit():
         "attribution": attr,
         "confidence": confidence,
         "label": label,
+        # Additive: exposes the two signal scores so clients (the UI) can show
+        # the multi-signal breakdown. Not part of the core required contract.
+        "signal_scores": {"llm": s1["score"], "stylometric": s2["score"]},
     })
 
 

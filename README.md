@@ -18,13 +18,32 @@ cp .env.example .env                 # then add your GROQ_API_KEY
 python app.py                        # serves on http://localhost:5000
 ```
 
+Then open **http://localhost:5000** in a browser for the web UI, or use the JSON
+API directly with `curl`.
+
+## Web UI
+
+A single self-contained page (`static/index.html`, served at `/`, no extra
+dependencies) with three tabs:
+
+- **Analyze** — paste text, see the color-coded transparency label, a confidence
+  meter, and the two individual signal scores (LLM vs. stylometric).
+- **Appeal** — the `content_id` from an analysis is prefilled; enter reasoning to
+  file an appeal.
+- **Audit Log** — a live table of recent decisions and appeals.
+
 ## API
 
 | Method | Route | Body | Returns |
 | --- | --- | --- | --- |
-| POST | `/submit` | `{"text": ..., "creator_id": ...}` | `{content_id, attribution, confidence, label}` |
+| GET | `/` | — | Web UI (HTML) |
+| POST | `/submit` | `{"text": ..., "creator_id": ...}` | `{content_id, attribution, confidence, label, signal_scores}` |
 | POST | `/appeal` | `{"content_id": ..., "creator_reasoning": ...}` | `{content_id, status, message}` |
 | GET | `/log` | — | `{"entries": [...]}` |
+| GET | `/health` | — | health string |
+
+`signal_scores` (`{llm, stylometric}`) is an additive field for the UI; the core
+required response is `content_id`, `attribution`, `confidence`, `label`.
 
 ```bash
 curl -s -X POST http://localhost:5000/submit \
