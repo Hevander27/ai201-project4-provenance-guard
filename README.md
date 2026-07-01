@@ -44,8 +44,18 @@ submissions with noticeably different scores (from your Milestone 4 testing)._
 
 ## Transparency Label Variants
 
-_TODO: verbatim text of all three variants (high-confidence AI, high-confidence
-human, uncertain)._
+The label a reader sees. `{ai}` = `round(confidence * 100)`, `{human}` = `100 - {ai}`,
+where `confidence` is the estimated probability the text is AI-generated.
+
+| Variant | Shown when | Exact text |
+| --- | --- | --- |
+| **High-confidence AI** | `confidence >= 0.75` | `⚠️ Likely AI-generated ({ai}% confidence). This text shows strong signals of AI authorship.` |
+| **High-confidence human** | `confidence <= 0.40` | `✅ Likely human-written ({human}% confidence). No strong signals of AI authorship were found.` |
+| **Uncertain** | `0.40 < confidence < 0.75` | `❓ Attribution uncertain ({ai}% estimated AI). Our signals are mixed, so this result is inconclusive.` |
+
+The AI variant says "shows strong signals of" rather than accusing, reflecting
+the design choice that a false positive (labeling human work as AI) is the
+costlier error.
 
 ## Appeals Workflow
 

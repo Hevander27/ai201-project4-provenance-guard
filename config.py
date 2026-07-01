@@ -23,11 +23,12 @@ LOG_FILE = "logs/audit.jsonl"
 # Convention: `confidence` == P(content is AI-generated), in [0.0, 1.0].
 #   0.0 -> certainly human   |   1.0 -> certainly AI
 #
-# PLACEHOLDER thresholds — decide the real values in planning.md (Milestone 2).
-# The hint in the assignment: a false positive (calling a human "AI") is worse
-# than a false negative, so you may want the AI threshold to be demanding.
-AI_THRESHOLD = 0.70     # confidence >= this  -> "likely_ai"
-HUMAN_THRESHOLD = 0.30  # confidence <= this  -> "likely_human"
+# "Protect humans" stance (planning.md, Milestone 2): a false positive (calling
+# a human's work "AI") is the costly error, so the AI threshold is demanding and
+# the uncertain band is wide. Borderline formal-human text lands in "uncertain"
+# rather than being accused.
+AI_THRESHOLD = 0.75     # confidence >= this  -> "likely_ai"
+HUMAN_THRESHOLD = 0.40  # confidence <= this  -> "likely_human"
 #                          in between          -> "uncertain"
 
 # PLACEHOLDER signal weights for combining the two signals (Milestone 4).

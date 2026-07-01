@@ -9,21 +9,22 @@ planning.md AND the README (it's graded from there). Write it there first, then
 paste the final wording into LABELS below so code and docs match.
 """
 
-# TODO (M2/M5): replace these PLACEHOLDERs with your finalized label text.
-# Keep in mind the assignment's asymmetry hint: a false positive (calling a
-# human's work "AI") is the costly error — the "likely_ai" wording should hedge
-# accordingly rather than accuse.
+# Finalized label text (planning.md, Milestone 2 — "direct & concise" tone).
+# `{ai}` = round(confidence * 100); `{human}` = 100 - {ai}. The percentage makes
+# the confidence meaningful to a reader; the "likely_ai" wording says "signals
+# of" rather than accusing, per the false-positive asymmetry.
 LABELS = {
     "likely_ai": (
-        "PLACEHOLDER — high-confidence AI label. Write the exact reader-facing "
-        "text in planning.md, then paste it here."
+        "⚠️ Likely AI-generated ({ai}% confidence). "
+        "This text shows strong signals of AI authorship."
     ),
     "likely_human": (
-        "PLACEHOLDER — high-confidence human label."
+        "✅ Likely human-written ({human}% confidence). "
+        "No strong signals of AI authorship were found."
     ),
     "uncertain": (
-        "PLACEHOLDER — uncertain label. This should read differently from the "
-        "two confident variants so 0.51 != 0.95 for the reader."
+        "❓ Attribution uncertain ({ai}% estimated AI). "
+        "Our signals are mixed, so this result is inconclusive."
     ),
 }
 
@@ -31,8 +32,10 @@ LABELS = {
 def make_label(attribution: str, confidence: float) -> str:
     """Return the reader-facing label text for a given attribution.
 
-    `confidence` is available if you want to interpolate the percentage into the
-    text (e.g. "we're about 82% confident ...") — a nice way to surface the
-    number without exposing raw signal internals.
+    The confidence percentage is interpolated into the text so 0.51 and 0.95
+    read differently to a non-technical reader.
     """
-    return LABELS.get(attribution, LABELS["uncertain"])
+    ai_pct = round(confidence * 100)
+    human_pct = 100 - ai_pct
+    template = LABELS.get(attribution, LABELS["uncertain"])
+    return template.format(ai=ai_pct, human=human_pct)
